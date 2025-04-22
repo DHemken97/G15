@@ -26,21 +26,59 @@ namespace G15_Interop
 
             log = new Queue<string>(20);
             Display.ScreenUpdated += OnScreenUpdated;
+            Display.ButtonsChanged += OnButtonsChanged;
             Display.Clear();
 
             fileSystemWatcher1.Path = "C:\\G15";
+
+            OnButtonsChanged(this, new ButtonsChangedEventArgs(Logitech_LCD.Buttons.MonoButton0,false));    
       
-            var npServer = new G15PipeServer(Display);
-            npServer.Start();
+            //var npServer = new G15PipeServer(Display);
+            //npServer.Start();
         }
 
+        private void OnButtonsChanged(object sender, ButtonsChangedEventArgs e)
+        {
+            var index = 0;
+
+            switch(e.Button)
+            {
+                case Logitech_LCD.Buttons.MonoButton0:
+                    index = 0;
+                    break;
+
+                case Logitech_LCD.Buttons.MonoButton1:
+                    index = 1;
+                    break;
+
+                case Logitech_LCD.Buttons.MonoButton2:
+                    index = 2;
+                    break;
+
+                case Logitech_LCD.Buttons.MonoButton3:
+                    index = 3;
+                    break;
+
+            }
+
+            var message = $"Button {index} {(e.IsPressed ? "Pressed" : "Released")}";
+            LogMessage(message);
+
+            File.WriteAllLines($"{fileSystemWatcher1.Path}\\Buttons.txt", Display.ButtonStates.Select(x => x.Value.ToString()));
+        }
 
         private void OnScreenUpdated(object sender, ScreenUpdatedEventArgs e)
         {
             pictureBox1.Image = e.Preview;
+
+            LogMessage(e.UpdateMessage);
+        }
+
+        private void LogMessage(string updateMessage)
+        {
             if (log.Count >= 20)
                 log.Dequeue();
-            log.Enqueue(e.UpdateMessage);
+            log.Enqueue(updateMessage);
             richTextBox1.Text = string.Join("\r\n", log.Reverse());
         }
 

@@ -1,5 +1,9 @@
-﻿using System;
+﻿using Logitech_LCD;
+using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
+using System.Timers;
 using static System.Net.Mime.MediaTypeNames;
 
 
@@ -8,7 +12,9 @@ namespace G15_Interop
     public interface IG15_Display
     {
         event EventHandler<ScreenUpdatedEventArgs> ScreenUpdated;
+        event EventHandler<ButtonsChangedEventArgs> ButtonsChanged;
 
+        Dictionary<Buttons, bool> ButtonStates { get; } 
         void Clear();
         Bitmap DrawScreen();
         void RefreshScreen();
@@ -18,8 +24,10 @@ namespace G15_Interop
     public class G15_Display : IG15_Display
     {
         public event EventHandler<ScreenUpdatedEventArgs> ScreenUpdated;
+        public event EventHandler<ButtonsChangedEventArgs> ButtonsChanged;
 
         private string[] Lines = new string[4];
+        public Dictionary<Buttons, bool> ButtonStates { get; private set; } 
         private string updateMessage;
         private Bitmap background;
         private Logitech_LCD.LogitechLcd Lcd;
@@ -29,6 +37,45 @@ namespace G15_Interop
         {
             if (isDummy) return;
             Lcd = Logitech_LCD.LogitechLcd.Instance;
+
+
+            ButtonStates = new Dictionary<Buttons, bool>
+            {
+                {Buttons.MonoButton0,false},
+                {Buttons.MonoButton1,false},
+                {Buttons.MonoButton2,false},
+                {Buttons.MonoButton3,false}
+            };
+            
+            
+            var timer = new System.Timers.Timer();
+            timer.Interval = 100;
+            timer.Elapsed += PollButtons;
+            timer.AutoReset = true;
+            timer.Start();
+
+
+
+        }
+
+        private void PollButtons(object sender, ElapsedEventArgs e)
+        {
+            if (Lcd == null) { 
+                ((Timer)sender).Stop(); return;
+            };
+            var buttons = ButtonStates.Select(x => x.Key).ToArray();
+            foreach (var button in buttons) {
+
+                var value = ButtonStates[button];
+                var current = Lcd.IsButtonPressed(button);
+                if (current != value)
+                {
+                    ButtonStates[button] = current;
+                    
+                    ButtonsChanged?.Invoke(this,new ButtonsChangedEventArgs(button, current));
+                }
+            }
+            
         }
 
         public virtual void Clear()

@@ -30,7 +30,6 @@ namespace G15_Interop
         private string[] Lines = new string[4];
         public Dictionary<Buttons, bool> ButtonStates { get; private set; } 
         private string updateMessage;
-        private Bitmap background;
         private Logitech_LCD.LogitechLcd Lcd;
         private bool HoldEvent;
 
@@ -43,7 +42,6 @@ namespace G15_Interop
                 {Buttons.MonoButton2,false},
                 {Buttons.MonoButton3,false}
             };
-            background = new Bitmap(160, 43);
 
             if (isDummy) return;
             InitScreen();
@@ -69,7 +67,7 @@ namespace G15_Interop
             LogitechLcd.Instance.Update();
             Lcd = Logitech_LCD.LogitechLcd.Instance;
 
-            Thread.Sleep(5000);
+            Thread.Sleep(2000);
             Clear();
         }
 
@@ -101,8 +99,7 @@ namespace G15_Interop
             SetLine(2,string.Empty);
             SetLine(3,string.Empty);
 
-            background?.Dispose();
-            background = new Bitmap(160,43);
+            SetBackground(new Bitmap(160, 43));
             updateMessage = "Screen Cleared";
             HoldEvent = false;
             RefreshScreen();
@@ -111,16 +108,24 @@ namespace G15_Interop
         public virtual Bitmap DrawScreen()
         {
 
-            var img = ((background?.Height??0) == 160 && (background?.Height??0)==43) ? background : new Bitmap(160,43);         
-            var gfx = Graphics.FromImage(img);
-            var lineHeight = img.Height / 4;
-            var lineMargin = Math.Max( (int)(lineHeight * 0.05),1);
-            Font font = new Font("MS Gothic", (int)lineHeight-(2*lineMargin), FontStyle.Bold);
-            Brush brush = Brushes.Black;
-            gfx.DrawString(Lines[0], font, brush, new PointF(lineMargin, lineMargin));
-            gfx.DrawString(Lines[1], font, brush, new PointF(lineMargin, (1*lineHeight)+lineMargin));
-            gfx.DrawString(Lines[2], font, brush, new PointF(lineMargin, (2*lineHeight)+lineMargin));
-            gfx.DrawString(Lines[3], font, brush, new PointF(lineMargin, (3*lineHeight)+lineMargin));
+            var img =  new Bitmap(160,43);
+            try
+            {
+                var gfx = Graphics.FromImage(img);
+                var lineHeight = 160 / 4;
+                var lineMargin = Math.Max((int)(lineHeight * 0.05), 1);
+                Font font = new Font("MS Gothic", (int)lineHeight - (2 * lineMargin), FontStyle.Bold);
+                Brush brush = Brushes.Black;
+                gfx.DrawString(Lines[0], font, brush, new PointF(lineMargin, lineMargin));
+                gfx.DrawString(Lines[1], font, brush, new PointF(lineMargin, (1 * lineHeight) + lineMargin));
+                gfx.DrawString(Lines[2], font, brush, new PointF(lineMargin, (2 * lineHeight) + lineMargin));
+                gfx.DrawString(Lines[3], font, brush, new PointF(lineMargin, (3 * lineHeight) + lineMargin));
+
+            }
+            catch
+            {
+
+            }
 
             return img;
 
@@ -150,13 +155,11 @@ namespace G15_Interop
 
         public void SetBackground(Bitmap bitmap)
         {
-            var mono = BitmapHelper.MakeMono(bitmap);
-            bitmap.Dispose();
-            var bytes = BitmapHelper.BitmapToBytes(mono);
+            var bytes = BitmapHelper.ConvertTo1bpp(bitmap);
             Lcd?.MonoSetBackground(bytes);
-            background = bitmap;
             updateMessage = $"Background Updated";
             RefreshScreen();
+            bitmap.Dispose();
         }
     }
 }

@@ -40,6 +40,7 @@ namespace G15_Interop
 
             var file = (Bitmap)Bitmap.FromFile("C:\\G15\\Background.bmp");
 
+
             Display.SetBackground(file);
 
         }

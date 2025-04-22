@@ -20,14 +20,15 @@ namespace G15_Interop
 
         internal static Bitmap MakeMono(Bitmap bitmap)
         {
+            var mono = new Bitmap(bitmap.Width, bitmap.Height);
             for (int x=0 ; x<bitmap.Width; x++)
                 for (int y=0 ; y<bitmap.Height ; y++)
                 {
                     var pix = bitmap.GetPixel(x, y);
                     var avg = (pix.R + pix.G + pix.B) / 3;
-                    bitmap.SetPixel(x, y, Color.FromArgb(avg,avg,avg));
+                    mono.SetPixel(x, y, Color.FromArgb(avg,avg,avg));
                 }
-            return bitmap;
+            return mono;
 
         }
     }

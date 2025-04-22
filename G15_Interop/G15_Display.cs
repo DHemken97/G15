@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
 using System.Timers;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -31,14 +32,10 @@ namespace G15_Interop
         private string updateMessage;
         private Bitmap background;
         private Logitech_LCD.LogitechLcd Lcd;
-
+        private bool HoldEvent;
 
         public G15_Display(bool isDummy = false)
         {
-            if (isDummy) return;
-            Lcd = Logitech_LCD.LogitechLcd.Instance;
-
-
             ButtonStates = new Dictionary<Buttons, bool>
             {
                 {Buttons.MonoButton0,false},
@@ -46,22 +43,40 @@ namespace G15_Interop
                 {Buttons.MonoButton2,false},
                 {Buttons.MonoButton3,false}
             };
-            
-            
+            background = new Bitmap(160, 43);
+
+            if (isDummy) return;
+            InitScreen();
+
+
             var timer = new System.Timers.Timer();
             timer.Interval = 100;
             timer.Elapsed += PollButtons;
             timer.AutoReset = true;
             timer.Start();
 
+            
 
 
+        }
+        private void InitScreen()
+        {
+            LogitechLcd.Instance.Init("My Winform App", LcdType.Mono);
+            LogitechLcd.Instance.MonoSetText(0, "----------------"); // Example: Top line separator
+            LogitechLcd.Instance.MonoSetText(1, " Welcome! "); // Your text on the second line
+            LogitechLcd.Instance.MonoSetText(2, "Starting Service..."); // Example: Show time
+            LogitechLcd.Instance.MonoSetText(3, "----------------"); // Example: Bottom line separator
+            LogitechLcd.Instance.Update();
+            Lcd = Logitech_LCD.LogitechLcd.Instance;
+
+            Thread.Sleep(5000);
+            Clear();
         }
 
         private void PollButtons(object sender, ElapsedEventArgs e)
         {
             if (Lcd == null) { 
-                ((Timer)sender).Stop(); return;
+                ((System.Windows.Forms.Timer)sender).Stop(); return;
             };
             var buttons = ButtonStates.Select(x => x.Key).ToArray();
             foreach (var button in buttons) {
@@ -80,17 +95,23 @@ namespace G15_Interop
 
         public virtual void Clear()
         {
-            Lines = new string[4];
+            HoldEvent = true;
+            SetLine(0,string.Empty);
+            SetLine(1,string.Empty);
+            SetLine(2,string.Empty);
+            SetLine(3,string.Empty);
+
             background?.Dispose();
             background = new Bitmap(160,43);
             updateMessage = "Screen Cleared";
+            HoldEvent = false;
             RefreshScreen();
         }
 
         public virtual Bitmap DrawScreen()
         {
 
-            var img =(Bitmap) background?.Clone() ?? new Bitmap(160, 43);            
+            var img = ((background?.Height??0) == 160 && (background?.Height??0)==43) ? background : new Bitmap(160,43);         
             var gfx = Graphics.FromImage(img);
             var lineHeight = img.Height / 4;
             var lineMargin = Math.Max( (int)(lineHeight * 0.05),1);
@@ -112,6 +133,7 @@ namespace G15_Interop
         }
         protected void RaiseScreenUpdatedEvent()
         {
+            if (HoldEvent) return;
             var screenPreview = DrawScreen();
             ScreenUpdated?.Invoke(this, new ScreenUpdatedEventArgs(screenPreview, updateMessage??"Screen Refreshed"));
             updateMessage = null;
@@ -129,6 +151,7 @@ namespace G15_Interop
         public void SetBackground(Bitmap bitmap)
         {
             var mono = BitmapHelper.MakeMono(bitmap);
+            bitmap.Dispose();
             var bytes = BitmapHelper.BitmapToBytes(mono);
             Lcd?.MonoSetBackground(bytes);
             background = bitmap;

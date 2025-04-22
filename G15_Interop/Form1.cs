@@ -27,14 +27,21 @@ namespace G15_Interop
             log = new Queue<string>(20);
             Display.ScreenUpdated += OnScreenUpdated;
             Display.ButtonsChanged += OnButtonsChanged;
-            Display.Clear();
 
             fileSystemWatcher1.Path = "C:\\G15";
+            fileSystemWatcher1.Changed += fileSystemWatcher1_Changed;
 
-            OnButtonsChanged(this, new ButtonsChangedEventArgs(Logitech_LCD.Buttons.MonoButton0,false));    
-      
+            OnButtonsChanged(this, new ButtonsChangedEventArgs(Logitech_LCD.Buttons.MonoButton0,false));
+
             //var npServer = new G15PipeServer(Display);
             //npServer.Start();
+
+            Display.Clear();
+
+            var file = (Bitmap)Bitmap.FromFile("C:\\G15\\Background.bmp");
+
+            Display.SetBackground(file);
+
         }
 
         private void OnButtonsChanged(object sender, ButtonsChangedEventArgs e)
@@ -86,9 +93,13 @@ namespace G15_Interop
         {
             try
             {
-                if (e.Name == "background.bmp")
-                    Display.SetBackground((Bitmap)Bitmap.FromFile(e.FullPath));
-                if (e.Name == "lines.txt")
+                if (e.Name == "Background.bmp")
+                {
+                    var file = (Bitmap)Bitmap.FromFile(e.FullPath);
+
+                    Display.SetBackground(file);
+                }
+                if (e.Name == "Lines.txt")
                 {
                     var lines = File.ReadAllLines(e.FullPath);
                     Display.SetLine(0, lines[0]);
